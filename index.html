@@ -1,281 +1,77 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>카드통장 0원 맞추기</title>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <style>
-    :root{
-      --primary:#2357d9;--primary-dark:#173c9b;--line:#dfe5ef;--bg:#f5f7fb;
-      --text:#1d2530;--muted:#6d7786;--success:#16815d;--warning:#d46b08;
-      --danger:#c7362f;--soft:#f8faff;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .app{min-height:100vh;display:flex;flex-direction:column}
-    .topbar{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;gap:12px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .brand-badge{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),#6f8ef6);color:#fff;font-size:18px}
-    .top-actions,.action-buttons{display:flex;gap:8px;flex-wrap:wrap}
-    button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;transition:.18s}
-    button:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.07)}
-    button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-    button.primary:hover{background:var(--primary-dark)}
-    button:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
-    main{width:min(1180px,calc(100% - 32px));margin:28px auto 50px}
-    .hero{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:0 8px 24px rgba(31,48,85,.05)}
-    .eyebrow{font-size:13px;font-weight:800;color:var(--primary);letter-spacing:.04em}
-    h1{font-size:clamp(26px,4vw,38px);margin:8px 0}
-    .sub{color:var(--muted);line-height:1.7;margin:0}
-    .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px}
-    .step{background:var(--soft);border:1px solid #e6ebf5;border-radius:12px;padding:14px}
-    .step strong{display:block;color:var(--primary);font-size:13px;margin-bottom:4px}
-    .step span{font-size:14px}.step.active{border-color:#9fb5f4;background:#eef3ff}
-    .workspace{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;min-width:0}
-    .card h2{font-size:18px;margin:0 0 6px}.hint{color:var(--muted);font-size:14px;line-height:1.6}
-    .dropzone{margin-top:14px;border:2px dashed #bfc9dc;border-radius:14px;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;background:#fbfcff;transition:.2s}
-    .dropzone.dragover{border-color:var(--primary);background:#f2f6ff}.dropzone.ok{border-color:#67b69b;background:#f4fbf8}.dropzone.error{border-color:#e1a19c;background:#fff8f7}
-    .drop-icon{font-size:38px;margin-bottom:6px}.file-name{margin-top:10px;font-weight:800;color:var(--success);word-break:break-all}
-    input[type=file]{display:none}.file-btn{display:inline-block;margin-top:12px;background:var(--primary);color:#fff;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}
-    .analysis-box{display:none;margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.analysis-box.show{display:block}
-    .analysis-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-weight:800}
-    .badge{font-size:12px;padding:5px 8px;border-radius:999px;background:#eaf7f2;color:var(--success);white-space:nowrap}.badge.warn{background:#fff2df;color:var(--warning)}
-    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stat{border-radius:10px;background:#f7f9fc;padding:11px}.stat small{display:block;color:var(--muted);margin-bottom:4px}.stat strong{font-size:18px;word-break:break-all}
-    .meta{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.6;word-break:break-all}
-    .actionbar{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .status{font-size:14px;color:var(--muted);line-height:1.6}.status.ready{color:var(--success);font-weight:800}.status.error{color:var(--danger);font-weight:800}
-    .summary{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;display:none}.summary.show{display:block}.summary h2{margin:0 0 14px;font-size:20px}
-    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.summary-item{background:#f7f9fc;border-radius:12px;padding:14px}.summary-item small{display:block;color:var(--muted);margin-bottom:6px}.summary-item strong{font-size:19px}
-    .guide{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px}.guide h2{margin-top:0;font-size:20px}
-    .guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.guide-item{border:1px solid var(--line);border-radius:12px;padding:16px}.guide-item h3{margin:0 0 8px;font-size:16px}.guide-item p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
-    .notice{margin-top:14px;padding:14px 16px;border-radius:12px;background:#edf8f4;border:1px solid #bde2d4;color:#1b664f;font-size:14px;line-height:1.6}
-    footer{margin-top:auto;text-align:center;color:#8791a1;font-size:13px;padding:24px}
-    .modal{position:fixed;inset:0;background:rgba(13,21,38,.46);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}.modal.show{display:flex}.modal-box{width:min(600px,100%);background:#fff;border-radius:18px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.25)}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.modal-head h3{margin:0}.close{border:0;background:#f1f3f7;padding:8px 11px}.modal-body{margin-top:14px;color:var(--muted);font-size:14px;line-height:1.75}
-    @media(max-width:820px){.workspace,.guide-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr 1fr}.summary-grid{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start}}
-    @media(max-width:520px){main{width:min(100% - 20px,1180px);margin-top:16px}.hero{padding:20px}.steps,.summary-grid{grid-template-columns:1fr}.topbar{padding:12px}.brand span:last-child{font-size:14px}.dropzone{min-height:160px}.stats{grid-template-columns:1fr}}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>카드통장 0원 맞추기</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--p:#2357d9;--pd:#173c9b;--line:#dfe5ef;--bg:#f5f7fb;--txt:#1d2530;--muted:#6d7786;--ok:#16815d;--warn:#d46b08;--bad:#c7362f;--soft:#f8faff}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif;background:var(--bg);color:var(--txt)}
+.app{min-height:100vh;display:flex;flex-direction:column}.topbar{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:10}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--p),#6f8ef6);color:#fff}.top-actions,.buttons{display:flex;gap:8px;flex-wrap:wrap}button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}button.primary{background:var(--p);border-color:var(--p);color:#fff}button.primary:hover{background:var(--pd)}button:disabled{opacity:.45;cursor:not-allowed}
+main{width:min(1180px,calc(100% - 32px));margin:28px auto 50px}.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 8px 24px rgba(31,48,85,.04)}.eyebrow{font-size:13px;font-weight:800;color:var(--p)}h1{font-size:clamp(26px,4vw,38px);margin:8px 0}.sub{color:var(--muted);line-height:1.7;margin:0}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px}.step{background:var(--soft);border:1px solid #e6ebf5;border-radius:12px;padding:14px}.step strong{display:block;color:var(--p);font-size:13px;margin-bottom:4px}.step.active{border-color:#9fb5f4;background:#eef3ff}
+.workspace{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;min-width:0}.card h2{font-size:18px;margin:0 0 6px}.hint{color:var(--muted);font-size:14px;line-height:1.6}.dropzone{margin-top:14px;border:2px dashed #bfc9dc;border-radius:14px;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;background:#fbfcff}.dropzone.dragover{border-color:var(--p);background:#f2f6ff}.dropzone.ok{border-color:#67b69b;background:#f4fbf8}.drop-icon{font-size:36px}.file-name{margin-top:10px;font-weight:800;color:var(--ok);word-break:break-all}input[type=file]{display:none}.file-btn{display:inline-block;margin-top:12px;background:var(--p);color:#fff;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}.analysis{display:none;margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:14px}.analysis.show{display:block}.analysis-title{display:flex;justify-content:space-between;gap:8px;font-weight:800}.badge{font-size:12px;padding:5px 8px;border-radius:999px;background:#eaf7f2;color:var(--ok)}.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.stat{background:#f7f9fc;border-radius:10px;padding:10px}.stat small{display:block;color:var(--muted);margin-bottom:4px}.meta{margin-top:9px;color:var(--muted);font-size:12px;line-height:1.55}
+.actionbar{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.status{font-size:14px;color:var(--muted);line-height:1.6}.status.ready{color:var(--ok);font-weight:800}.status.error{color:var(--bad);font-weight:800}
+.summary{margin-top:18px;display:none}.summary.show{display:block}.summary h2{margin-top:0}.sumgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.sumitem{background:#f7f9fc;border-radius:12px;padding:14px}.sumitem small{display:block;color:var(--muted);margin-bottom:6px}.sumitem strong{font-size:20px}.sumitem.ok strong{color:var(--ok)}.sumitem.warn strong{color:var(--warn)}.sumitem.bad strong{color:var(--bad)}
+.results{margin-top:18px;display:none}.results.show{display:block}.result-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}.filterbar{display:flex;gap:8px;flex-wrap:wrap}.filterbar button.active{background:#eef3ff;border-color:#9fb5f4;color:var(--p)}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:860px;font-size:13px}th,td{padding:10px 12px;border-bottom:1px solid #edf0f5;text-align:left;vertical-align:top}th{background:#f7f9fc;position:sticky;top:0;z-index:1}.money{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.tag{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}.tag.ok{background:#eaf7f2;color:var(--ok)}.tag.warn{background:#fff2df;color:var(--warn)}.tag.bad{background:#fdebea;color:var(--bad)}.empty{text-align:center;color:var(--muted);padding:28px}.note{margin-top:12px;background:#fff7e8;border:1px solid #ffe0a8;color:#8d4b00;border-radius:12px;padding:13px;font-size:13px;line-height:1.65}
+.guide{margin-top:18px}.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.guide-item{border:1px solid var(--line);border-radius:12px;padding:16px}.guide-item h3{margin:0 0 8px;font-size:16px}.guide-item p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}footer{margin-top:auto;text-align:center;color:#8791a1;font-size:13px;padding:24px}
+.modal{position:fixed;inset:0;background:rgba(13,21,38,.46);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}.modal.show{display:flex}.modal-box{width:min(620px,100%);background:#fff;border-radius:18px;padding:22px}.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-body{margin-top:14px;color:var(--muted);font-size:14px;line-height:1.75}
+@media(max-width:820px){.workspace,.guide-grid{grid-template-columns:1fr}.steps,.sumgrid{grid-template-columns:1fr 1fr}}@media(max-width:520px){main{width:calc(100% - 20px);margin-top:16px}.panel{padding:18px}.steps,.sumgrid,.stats{grid-template-columns:1fr}.topbar{padding:12px}}
+</style>
 </head>
 <body>
 <div class="app">
-  <header class="topbar">
-    <div class="brand"><div class="brand-badge">₩</div><span>카드통장 0원 맞추기</span></div>
-    <div class="top-actions"><button id="settingsBtn">설정</button><button id="helpBtn">사용설명서</button></div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div class="eyebrow">STEP 2 · 엑셀 읽기와 파일 자동 판별</div>
-      <h1>원인행위목록 ↔ 카드사용내역</h1>
-      <p class="sub">엑셀 파일을 브라우저에서 직접 읽고, 제목행과 금액 열을 찾아 파일 종류·건수·합계금액을 자동 분석합니다. 파일은 서버로 전송하지 않고 현재 브라우저에서만 처리합니다.</p>
-      <div class="steps">
-        <div class="step"><strong>01</strong><span>엑셀 두 개 준비</span></div>
-        <div class="step active"><strong>02</strong><span>자동 읽기·판별</span></div>
-        <div class="step"><strong>03</strong><span>0원 맞추기</span></div>
-        <div class="step"><strong>04</strong><span>결과 저장</span></div>
-      </div>
-    </section>
-
-    <section class="workspace">
-      <article class="card">
-        <h2>① 원인행위목록</h2>
-        <p class="hint">K-에듀파인에서 내려받은 원인행위 목록 엑셀을 넣습니다. 다른 칸에 넣어도 파일 종류를 감지해 자동 정리합니다.</p>
-        <div class="dropzone" id="causeZone" data-target="causeInput">
-          <div class="drop-icon">📄</div><strong>원인행위목록 파일을 끌어다 놓으세요</strong>
-          <span class="hint">또는 아래 버튼을 눌러 선택</span><label class="file-btn" for="causeInput">파일 선택</label>
-          <input id="causeInput" type="file" accept=".xlsx,.xls,.csv" /><div class="file-name" id="causeName">아직 넣지 않았습니다.</div>
-        </div>
-        <div class="analysis-box" id="causeAnalysis"></div>
-      </article>
-
-      <article class="card">
-        <h2>② 카드사용내역</h2>
-        <p class="hint">카드사에서 내려받은 승인·이용내역 엑셀을 넣습니다. BC카드 WISEBIZ 등 여러 형식을 최대한 자동 인식합니다.</p>
-        <div class="dropzone" id="cardZone" data-target="cardInput">
-          <div class="drop-icon">💳</div><strong>카드사용내역 파일을 끌어다 놓으세요</strong>
-          <span class="hint">또는 아래 버튼을 눌러 선택</span><label class="file-btn" for="cardInput">파일 선택</label>
-          <input id="cardInput" type="file" accept=".xlsx,.xls,.csv" /><div class="file-name" id="cardName">아직 넣지 않았습니다.</div>
-        </div>
-        <div class="analysis-box" id="cardAnalysis"></div>
-      </article>
-    </section>
-
-    <section class="actionbar">
-      <div class="status" id="statusText">두 파일을 넣으면 엑셀 내용을 자동 분석합니다.</div>
-      <div class="action-buttons"><button id="resetBtn">처음부터 다시</button><button id="matchBtn" class="primary" disabled>0원 맞추기</button><button id="excelBtn" disabled>엑셀저장</button></div>
-    </section>
-
-    <section class="summary" id="summaryBox">
-      <h2>2단계 분석 결과</h2>
-      <div class="summary-grid">
-        <div class="summary-item"><small>원인행위 건수</small><strong id="causeCount">0건</strong></div>
-        <div class="summary-item"><small>원인행위 합계</small><strong id="causeTotal">0원</strong></div>
-        <div class="summary-item"><small>카드내역 건수</small><strong id="cardCount">0건</strong></div>
-        <div class="summary-item"><small>카드사용 합계</small><strong id="cardTotal">0원</strong></div>
-      </div>
-    </section>
-
-    <section class="guide">
-      <h2>2단계에서 추가된 기능</h2>
-      <div class="guide-grid">
-        <div class="guide-item"><h3>엑셀 자동 읽기</h3><p>첫 번째 시트만 고정하지 않고 각 시트를 살펴보며, 상단 약 30행 안에서 실제 제목행을 탐색합니다.</p></div>
-        <div class="guide-item"><h3>파일 종류 자동 판별</h3><p>원인행위·지급방법·채주·품의 등의 항목과 승인일자·승인금액·카드번호·가맹점 등의 항목을 비교해 파일 종류를 판단합니다.</p></div>
-        <div class="guide-item"><h3>건수 자동 계산</h3><p>제목행 아래의 실제 데이터 행 중 빈 행과 합계 행을 제외하여 대략적인 자료 건수를 계산합니다.</p></div>
-        <div class="guide-item"><h3>금액 열 자동 탐색</h3><p>원인행위금액·지출금액·승인금액·이용금액 등 대표 금액 제목을 찾아 합계를 계산합니다.</p></div>
-      </div>
-      <div class="notice"><strong>현재는 2단계입니다.</strong> 파일 읽기와 기초 분석까지 실제 작동합니다. <strong>0원 맞추기 버튼은 다음 3단계에서 1:1 금액 자동매칭 기능을 연결</strong>할 예정입니다.</div>
-    </section>
-  </main>
-  <footer>Program by Kwon O Young. 오춘기 권오영</footer>
+<header class="topbar"><div class="brand"><div class="logo">₩</div><span>카드통장 0원 맞추기</span></div><div class="top-actions"><button id="settingsBtn">설정</button><button id="helpBtn">사용설명서</button></div></header>
+<main>
+<section class="panel">
+<div class="eyebrow">STEP 3 · 1:1 금액 자동매칭</div>
+<h1>원인행위목록 ↔ 카드사용내역</h1>
+<p class="sub">두 엑셀을 읽어 금액이 양쪽에 각각 1건씩 존재하는 항목만 안전하게 자동매칭합니다. 같은 금액이 여러 건이면 임의로 연결하지 않고 중복 후보로 분리합니다.</p>
+<div class="steps"><div class="step"><strong>01</strong><span>엑셀 준비</span></div><div class="step"><strong>02</strong><span>자동 읽기·판별</span></div><div class="step active"><strong>03</strong><span>1:1 금액 매칭</span></div><div class="step"><strong>04</strong><span>결과 저장</span></div></div>
+</section>
+<section class="workspace">
+<article class="card"><h2>① 원인행위목록</h2><p class="hint">K-에듀파인 원인행위 목록 파일을 넣습니다.</p><div class="dropzone" id="causeZone" data-target="causeInput"><div class="drop-icon">📄</div><strong>원인행위목록 파일</strong><span class="hint">끌어다 놓거나 아래 버튼으로 선택</span><label class="file-btn" for="causeInput">파일 선택</label><input id="causeInput" type="file" accept=".xlsx,.xls,.csv"><div class="file-name" id="causeName">아직 넣지 않았습니다.</div></div><div class="analysis" id="causeAnalysis"></div></article>
+<article class="card"><h2>② 카드사용내역</h2><p class="hint">카드사 승인·이용내역 파일을 넣습니다.</p><div class="dropzone" id="cardZone" data-target="cardInput"><div class="drop-icon">💳</div><strong>카드사용내역 파일</strong><span class="hint">끌어다 놓거나 아래 버튼으로 선택</span><label class="file-btn" for="cardInput">파일 선택</label><input id="cardInput" type="file" accept=".xlsx,.xls,.csv"><div class="file-name" id="cardName">아직 넣지 않았습니다.</div></div><div class="analysis" id="cardAnalysis"></div></article>
+</section>
+<section class="actionbar"><div class="status" id="statusText">두 파일을 넣으면 내용을 자동 분석합니다.</div><div class="buttons"><button id="resetBtn">처음부터 다시</button><button id="matchBtn" class="primary" disabled>1:1 자동매칭</button><button id="excelBtn" disabled>엑셀저장</button></div></section>
+<section class="panel summary" id="summaryBox"><h2>3단계 매칭 결과</h2><div class="sumgrid"><div class="sumitem ok"><small>자동매칭 성공</small><strong id="matchedCount">0건</strong></div><div class="sumitem warn"><small>중복 후보</small><strong id="duplicateCount">0건</strong></div><div class="sumitem bad"><small>원인행위 미매칭</small><strong id="causeUnmatchedCount">0건</strong></div><div class="sumitem bad"><small>카드내역 미매칭</small><strong id="cardUnmatchedCount">0건</strong></div></div><div class="note" id="balanceNote"></div></section>
+<section class="panel results" id="resultsBox"><div class="result-head"><div><h2 style="margin:0 0 5px">매칭 상세</h2><div class="hint" id="resultCaption">결과를 확인합니다.</div></div><div class="filterbar"><button class="active" data-filter="all">전체</button><button data-filter="matched">자동매칭</button><button data-filter="duplicate">중복후보</button><button data-filter="unmatched">미매칭</button></div></div><div class="tablewrap"><table><thead><tr><th>상태</th><th>금액</th><th>원인행위 날짜</th><th>원인행위 내용</th><th>카드 날짜</th><th>카드 사용처/내용</th></tr></thead><tbody id="resultBody"></tbody></table></div><div class="note">3단계는 <strong>금액만으로 확실한 1:1 건</strong>을 찾아냅니다. 동일 금액이 여러 건인 경우에는 잘못 연결할 위험이 있어 자동매칭하지 않습니다. 다음 단계에서 날짜·가맹점·적요 등을 함께 사용해 중복 후보를 좁힐 수 있습니다.</div></section>
+<section class="panel guide"><h2 style="margin-top:0">3단계에서 추가된 기능</h2><div class="guide-grid"><div class="guide-item"><h3>안전한 1:1 매칭</h3><p>같은 금액이 원인행위와 카드내역에 각각 정확히 1건씩 있을 때만 자동 연결합니다.</p></div><div class="guide-item"><h3>중복 후보 분리</h3><p>같은 금액이 어느 한쪽이라도 여러 건이면 임의 매칭하지 않고 중복 후보로 표시합니다.</p></div><div class="guide-item"><h3>양쪽 미매칭 확인</h3><p>원인행위에만 있는 금액과 카드내역에만 있는 금액을 각각 확인할 수 있습니다.</p></div><div class="guide-item"><h3>금액 차이 확인</h3><p>두 파일의 전체 합계와 차액을 함께 보여주어 0원 맞추기 진행 상황을 확인합니다.</p></div></div></section>
+</main><footer>Program by Kwon O Young. 오춘기 권오영</footer>
 </div>
-
-<div class="modal" id="settingsModal"><div class="modal-box"><div class="modal-head"><h3>설정</h3><button class="close" data-close="settingsModal">닫기</button></div><div class="modal-body">현재 2단계에서는 파일 분석 기준을 자동으로 적용합니다. 3단계 이후에는 날짜 허용범위, 최대 묶음 건수 등 매칭 설정을 추가할 예정입니다.</div></div></div>
-<div class="modal" id="helpModal"><div class="modal-box"><div class="modal-head"><h3>사용설명서</h3><button class="close" data-close="helpModal">닫기</button></div><div class="modal-body">① 원인행위목록과 카드사용내역 엑셀을 각각 넣습니다.<br>② 프로그램이 시트·제목행·파일 종류·금액 열을 자동으로 찾습니다.<br>③ 분석이 끝나면 각 파일 아래에 건수와 합계금액이 표시됩니다.<br>④ 두 파일이 정상 인식되면 0원 맞추기 버튼이 활성화됩니다. 현재 2단계에서는 버튼 활성화까지만 하며 실제 매칭은 3단계에서 구현합니다.</div></div></div>
-
+<div class="modal" id="settingsModal"><div class="modal-box"><div class="modal-head"><h3>설정</h3><button data-close="settingsModal">닫기</button></div><div class="modal-body">현재 3단계는 금액 일치 여부만 사용합니다. 날짜 허용범위, 가맹점명 유사도, 묶음 매칭 등의 설정은 이후 단계에서 추가합니다.</div></div></div>
+<div class="modal" id="helpModal"><div class="modal-box"><div class="modal-head"><h3>사용설명서</h3><button data-close="helpModal">닫기</button></div><div class="modal-body">① 원인행위목록 선택 → ② 카드사용내역 선택 → ③ 두 파일 분석 완료 확인 → ④ <b>1:1 자동매칭</b> 클릭 → ⑤ 자동매칭·중복후보·미매칭 결과 확인 순서입니다. 파일은 브라우저 안에서 처리됩니다.</div></div></div>
 <script>
-const $=id=>document.getElementById(id);
-const causeInput=$('causeInput'),cardInput=$('cardInput'),causeName=$('causeName'),cardName=$('cardName');
-const causeZone=$('causeZone'),cardZone=$('cardZone'),causeAnalysis=$('causeAnalysis'),cardAnalysis=$('cardAnalysis');
-const statusText=$('statusText'),matchBtn=$('matchBtn'),excelBtn=$('excelBtn'),summaryBox=$('summaryBox');
-let state={cause:null,card:null};
-
-const CAUSE_KEYS=['원인행위','원인행위일자','지급방법','채주','품의','적요','계약','지출','지급'];
-const CARD_KEYS=['승인','승인일자','승인번호','승인금액','카드번호','가맹점','이용일','이용금액','사용금액','매입','취소'];
-const CAUSE_AMOUNT=['원인행위금액','지출금액','지급금액','품의금액','금액','지급액'];
-const CARD_AMOUNT=['승인금액','이용금액','사용금액','결제금액','매입금액','금액'];
-
-function norm(v){return String(v??'').replace(/\s+/g,'').replace(/[()\[\]{}]/g,'').toLowerCase()}
-function fmt(n){return new Intl.NumberFormat('ko-KR').format(Math.round(n||0))+'원'}
-function num(v){
-  if(typeof v==='number'&&Number.isFinite(v)) return v;
-  if(v==null||v==='') return NaN;
-  let s=String(v).trim();
-  const neg=/^\(.*\)$/.test(s)||s.startsWith('-');
-  s=s.replace(/[^0-9.]/g,'');
-  if(!s) return NaN;
-  const n=Number(s);return Number.isFinite(n)?(neg?-n:n):NaN;
-}
-function rowText(row){return row.map(norm).join('|')}
-function keyScore(text,keys){return keys.reduce((s,k)=>s+(text.includes(norm(k))?1:0),0)}
-function isTotalRow(row){const t=rowText(row);return /합계|총계|소계|누계/.test(t)}
-
-function findBestTable(workbook){
-  let best=null;
-  workbook.SheetNames.forEach(sheetName=>{
-    const ws=workbook.Sheets[sheetName];
-    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true,blankrows:false});
-    const limit=Math.min(rows.length,30);
-    for(let i=0;i<limit;i++){
-      const text=rowText(rows[i]||[]);
-      const causeScore=keyScore(text,CAUSE_KEYS),cardScore=keyScore(text,CARD_KEYS);
-      const score=Math.max(causeScore,cardScore)*10+(rows[i]||[]).filter(v=>String(v).trim()!=='').length;
-      if(!best||score>best.score) best={sheetName,rows,headerIndex:i,causeScore,cardScore,score};
-    }
-  });
-  return best;
-}
-
-function detectType(info){
-  if(info.causeScore>=2&&info.causeScore>info.cardScore) return 'cause';
-  if(info.cardScore>=2&&info.cardScore>info.causeScore) return 'card';
-  const header=rowText(info.rows[info.headerIndex]||[]);
-  if(/원인행위|지급방법|채주|품의/.test(header)) return 'cause';
-  if(/승인|카드번호|가맹점|이용금액|사용금액/.test(header)) return 'card';
-  return 'unknown';
-}
-
-function findAmountIndex(headers,type){
-  const cands=type==='cause'?CAUSE_AMOUNT:CARD_AMOUNT;
-  const hs=headers.map(norm);
-  for(const c of cands){const cc=norm(c);const exact=hs.findIndex(h=>h===cc);if(exact>=0)return exact}
-  for(const c of cands){const cc=norm(c);const idx=hs.findIndex(h=>h.includes(cc)||cc.includes(h));if(idx>=0)return idx}
-  return -1;
-}
-
-function analyzeRows(info,type){
-  const headers=(info.rows[info.headerIndex]||[]).map(v=>String(v??'').trim());
-  const amountIndex=findAmountIndex(headers,type);
-  const data=[];
-  for(let i=info.headerIndex+1;i<info.rows.length;i++){
-    const row=info.rows[i]||[];
-    if(!row.some(v=>String(v??'').trim()!=='')) continue;
-    if(isTotalRow(row)) continue;
-    data.push(row);
-  }
-  let total=0,amountCount=0;
-  if(amountIndex>=0){data.forEach(r=>{const n=num(r[amountIndex]);if(Number.isFinite(n)){total+=n;amountCount++}})}
-  return {headers,amountIndex,amountHeader:amountIndex>=0?headers[amountIndex]:'찾지 못함',data,count:data.length,total,amountCount};
-}
-
-async function analyzeFile(file){
-  if(typeof XLSX==='undefined') throw new Error('엑셀 분석 라이브러리를 불러오지 못했습니다. 인터넷 연결 후 새로고침해 주세요.');
-  const buffer=await file.arrayBuffer();
-  const wb=XLSX.read(buffer,{type:'array',cellDates:true});
-  const info=findBestTable(wb);
-  if(!info) throw new Error('읽을 수 있는 표를 찾지 못했습니다.');
-  const type=detectType(info);
-  const parsed=analyzeRows(info,type==='unknown'?'cause':type);
-  return {file,workbook:wb,type,sheetName:info.sheetName,headerIndex:info.headerIndex,...parsed,causeScore:info.causeScore,cardScore:info.cardScore};
-}
-
-function renderAnalysis(type,obj){
-  const box=type==='cause'?causeAnalysis:cardAnalysis;
-  if(!obj){box.className='analysis-box';box.innerHTML='';return}
-  const typeLabel=obj.type==='cause'?'원인행위목록':obj.type==='card'?'카드사용내역':'형식 확인 필요';
-  const badgeClass=obj.type==='unknown'?'badge warn':'badge';
-  box.className='analysis-box show';
-  box.innerHTML=`<div class="analysis-title"><span>${escapeHtml(obj.file.name)}</span><span class="${badgeClass}">${typeLabel}</span></div>
-    <div class="stats"><div class="stat"><small>데이터 건수</small><strong>${obj.count.toLocaleString()}건</strong></div><div class="stat"><small>금액 합계</small><strong>${obj.amountIndex>=0?fmt(obj.total):'금액 열 확인 필요'}</strong></div></div>
-    <div class="meta">시트: ${escapeHtml(obj.sheetName)} · 제목행: ${obj.headerIndex+1}행 · 금액열: ${escapeHtml(obj.amountHeader||'찾지 못함')}</div>`;
-}
-function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-
-function assign(type,obj){
-  state[type]=obj;
-  const isCause=type==='cause';
-  (isCause?causeName:cardName).textContent='분석됨: '+obj.file.name;
-  (isCause?causeZone:cardZone).classList.remove('error');
-  (isCause?causeZone:cardZone).classList.add('ok');
-  renderAnalysis(type,obj);updateState();
-}
-
-async function handleFile(file,requestedType){
-  if(!file)return;
-  if(!/\.(xlsx|xls|csv)$/i.test(file.name)){alert('엑셀 또는 CSV 파일만 선택해 주세요.');return}
-  statusText.className='status';statusText.textContent='엑셀을 읽고 있습니다…';
-  try{
-    const obj=await analyzeFile(file);
-    let target=obj.type;
-    if(target==='unknown') target=requestedType;
-    if(target!==requestedType&&obj.type!=='unknown'){
-      statusText.textContent=`${file.name} 파일은 ${target==='cause'?'원인행위목록':'카드사용내역'}으로 감지되어 해당 칸으로 자동 이동했습니다.`;
-    }
-    assign(target,obj);
-  }catch(err){
-    const zone=requestedType==='cause'?causeZone:cardZone;zone.classList.add('error');
-    statusText.className='status error';statusText.textContent='파일 분석 실패: '+err.message;
-  }
-}
-
-function updateState(){
-  const ready=!!(state.cause&&state.card&&state.cause.amountIndex>=0&&state.card.amountIndex>=0);
-  matchBtn.disabled=!ready;excelBtn.disabled=true;
-  if(state.cause||state.card){summaryBox.classList.add('show')}else{summaryBox.classList.remove('show')}
-  $('causeCount').textContent=(state.cause?.count||0).toLocaleString()+'건';$('causeTotal').textContent=state.cause&&state.cause.amountIndex>=0?fmt(state.cause.total):'0원';
-  $('cardCount').textContent=(state.card?.count||0).toLocaleString()+'건';$('cardTotal').textContent=state.card&&state.card.amountIndex>=0?fmt(state.card.total):'0원';
-  if(ready){statusText.className='status ready';statusText.textContent='두 파일 분석이 완료되었습니다. 3단계 자동매칭을 진행할 준비가 되었습니다.'}
-  else if(!statusText.classList.contains('error')){statusText.className='status';if(!(state.cause&&state.card))statusText.textContent='두 파일을 모두 넣어 주세요. 파일 종류는 자동으로 판별합니다.';else statusText.textContent='파일은 읽었지만 금액 열을 찾지 못했습니다. 제목행과 금액 항목을 확인해 주세요.'}
-}
-
-causeInput.addEventListener('change',e=>handleFile(e.target.files[0],'cause'));cardInput.addEventListener('change',e=>handleFile(e.target.files[0],'card'));
-document.querySelectorAll('.dropzone').forEach(zone=>{const req=zone.dataset.target==='causeInput'?'cause':'card';['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add('dragover')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragover')}));zone.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0],req))});
-
-$('resetBtn').addEventListener('click',()=>{state={cause:null,card:null};causeInput.value='';cardInput.value='';causeName.textContent='아직 넣지 않았습니다.';cardName.textContent='아직 넣지 않았습니다.';[causeZone,cardZone].forEach(z=>z.classList.remove('ok','error','dragover'));renderAnalysis('cause',null);renderAnalysis('card',null);statusText.className='status';statusText.textContent='두 파일을 넣으면 엑셀 내용을 자동 분석합니다.';matchBtn.disabled=true;excelBtn.disabled=true;summaryBox.classList.remove('show')});
-matchBtn.addEventListener('click',()=>alert('2단계까지 정상 작동합니다. 다음 3단계에서 원인행위와 카드사용내역의 1:1 금액 자동매칭을 연결합니다.'));
-$('settingsBtn').addEventListener('click',()=>$('settingsModal').classList.add('show'));$('helpBtn').addEventListener('click',()=>$('helpModal').classList.add('show'));
-document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>$(btn.dataset.close).classList.remove('show')));document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')}));
+const $=id=>document.getElementById(id);const nf=new Intl.NumberFormat('ko-KR');
+const KEY={cause:['원인행위','지급방법','채주','품의','지출','결의','원인행위일','원인행위금액'],card:['승인일','승인일자','승인금액','이용금액','사용금액','카드번호','가맹점','승인번호','이용일']};
+const AMOUNT_WORDS=['원인행위금액','지출금액','승인금액','이용금액','사용금액','결제금액','공급가액','금액'];
+const DATE_WORDS=['원인행위일자','원인행위일','지출일자','승인일자','승인일','이용일자','이용일','사용일자','사용일','일자','날짜'];
+const DESC_WORDS_CAUSE=['채주명','채주','적요','내용','품의명','건명','사업명','지출내용'];
+const DESC_WORDS_CARD=['가맹점명','가맹점','이용가맹점','사용처','승인내역','이용내역','적요','내용'];
+let data={cause:null,card:null},matchRows=[];
+function clean(v){return String(v??'').replace(/\s+/g,'').trim()}
+function amount(v){if(v===null||v===undefined||v==='')return null;if(typeof v==='number')return Number.isFinite(v)?v:null;let s=String(v).trim();let neg=/^\(.*\)$/.test(s)||s.includes('-');s=s.replace(/[(),원₩\s]/g,'').replace(/-/g,'');const n=Number(s.replace(/,/g,''));return Number.isFinite(n)?(neg?-n:n):null}
+function fmtMoney(v){return nf.format(Math.round(v||0))+'원'}
+function headerScore(row,words){const text=row.map(clean);let score=0;words.forEach(w=>{if(text.some(x=>x.includes(w)))score++});return score}
+function findCol(headers,words){const h=headers.map(clean);for(const w of words){let i=h.findIndex(x=>x===w);if(i>=0)return i}for(const w of words){let i=h.findIndex(x=>x.includes(w));if(i>=0)return i}return -1}
+function rowHasData(row){return row.some(v=>clean(v)!=='')}
+function isTotalRow(row){const t=row.map(clean).join(' ');return /^(합계|총계)|합계$|총합/.test(t)||t==='합계'}
+function displayDate(v){if(v==null||v==='')return '';if(v instanceof Date)return v.toLocaleDateString('ko-KR');if(typeof v==='number'&&v>20000&&v<80000){const d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`}return String(v).trim()}
+async function parseFile(file){const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array',cellDates:true});let best=null;for(const sname of wb.SheetNames){const matrix=XLSX.utils.sheet_to_json(wb.Sheets[sname],{header:1,defval:'',raw:true});const limit=Math.min(30,matrix.length);for(let r=0;r<limit;r++){const row=matrix[r]||[];const cs=headerScore(row,KEY.cause),ks=headerScore(row,KEY.card),score=Math.max(cs,ks);if(!best||score>best.score)best={sheet:sname,matrix,headerRow:r,headers:row.map(v=>String(v??'').trim()),causeScore:cs,cardScore:ks,score}}}if(!best||best.score<1)throw new Error('제목행을 찾지 못했습니다. 파일 형식을 확인해 주세요.');best.type=best.causeScore>best.cardScore?'cause':best.cardScore>best.causeScore?'card':'unknown';const amountCol=findCol(best.headers,AMOUNT_WORDS);if(amountCol<0)throw new Error('금액 열을 찾지 못했습니다.');const dateCol=findCol(best.headers,DATE_WORDS);const descCol=findCol(best.headers,best.type==='card'?DESC_WORDS_CARD:DESC_WORDS_CAUSE);const rows=[];for(let i=best.headerRow+1;i<best.matrix.length;i++){const row=best.matrix[i]||[];if(!rowHasData(row)||isTotalRow(row))continue;const a=amount(row[amountCol]);if(a===null||a===0)continue;rows.push({rowNo:i+1,amount:a,keyAmount:Math.abs(Math.round(a)),date:dateCol>=0?displayDate(row[dateCol]):'',desc:descCol>=0?String(row[descCol]??'').trim():'',raw:row})}return{fileName:file.name,sheet:best.sheet,headerRow:best.headerRow+1,headers:best.headers,type:best.type,amountCol,amountHeader:best.headers[amountCol]||'',dateCol,descCol,rows,total:rows.reduce((s,r)=>s+r.amount,0)}}
+function analysisHtml(x,label){return `<div class="analysis-title"><span>${label} 분석 완료</span><span class="badge">${x.type==='cause'?'원인행위':x.type==='card'?'카드내역':'형식확인'}</span></div><div class="stats"><div class="stat"><small>데이터 건수</small><strong>${nf.format(x.rows.length)}건</strong></div><div class="stat"><small>금액 합계</small><strong>${fmtMoney(x.total)}</strong></div></div><div class="meta">시트: ${esc(x.sheet)} · 제목행: ${x.headerRow}행<br>금액 열: ${esc(x.amountHeader||String(x.amountCol+1)+'열')}</div>`}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function acceptFile(file,intended){if(!file)return;if(!/\.(xlsx|xls|csv)$/i.test(file.name)){alert('엑셀 또는 CSV 파일만 선택해 주세요.');return}setStatus('파일을 분석하고 있습니다…');try{const x=await parseFile(file);let target=x.type==='unknown'?intended:x.type;if(target!==intended)setStatus(`파일 종류를 감지하여 ${target==='cause'?'원인행위목록':'카드사용내역'} 칸으로 자동 배치했습니다.`);data[target]=x;renderFile(target);clearMatches();updateReady()}catch(e){setStatus(e.message||'파일 분석 중 오류가 발생했습니다.',true)}}
+function renderFile(type){const x=data[type];if(!x)return;$(type+'Name').textContent='선택됨: '+x.fileName;$(type+'Zone').classList.add('ok');$(type+'Analysis').innerHTML=analysisHtml(x,type==='cause'?'원인행위':'카드사용');$(type+'Analysis').classList.add('show')}
+function updateReady(){const ready=!!(data.cause&&data.card);$('matchBtn').disabled=!ready;if(ready)setStatus(`두 파일 분석 완료 · 원인행위 ${nf.format(data.cause.rows.length)}건 / 카드내역 ${nf.format(data.card.rows.length)}건. 1:1 자동매칭을 실행하세요.`);else setStatus('두 파일을 모두 넣으면 1:1 자동매칭을 실행할 수 있습니다.')}
+function setStatus(msg,error=false){const el=$('statusText');el.textContent=msg;el.className='status '+(error?'error':'ready')}
+function group(rows){const m=new Map();rows.forEach(r=>{if(!m.has(r.keyAmount))m.set(r.keyAmount,[]);m.get(r.keyAmount).push(r)});return m}
+function doMatch(){if(!data.cause||!data.card)return;const cg=group(data.cause.rows),kg=group(data.card.rows);const keys=new Set([...cg.keys(),...kg.keys()]);const out=[];let matched=0,dup=0,cu=0,ku=0;[...keys].sort((a,b)=>b-a).forEach(k=>{const ca=cg.get(k)||[],ka=kg.get(k)||[];if(ca.length===1&&ka.length===1){matched++;out.push({type:'matched',amount:k,cause:ca[0],card:ka[0]})}else if(ca.length&&ka.length){dup+=ca.length+ka.length;const n=Math.max(ca.length,ka.length);for(let i=0;i<n;i++)out.push({type:'duplicate',amount:k,cause:ca[i]||null,card:ka[i]||null,detail:`원인행위 ${ca.length}건 · 카드 ${ka.length}건`})}else if(ca.length){cu+=ca.length;ca.forEach(r=>out.push({type:'unmatched',amount:k,cause:r,card:null}))}else{ku+=ka.length;ka.forEach(r=>out.push({type:'unmatched',amount:k,cause:null,card:r}))}});matchRows=out;$('matchedCount').textContent=nf.format(matched)+'건';$('duplicateCount').textContent=nf.format(dup)+'건';$('causeUnmatchedCount').textContent=nf.format(cu)+'건';$('cardUnmatchedCount').textContent=nf.format(ku)+'건';const diff=data.cause.total-data.card.total;$('balanceNote').innerHTML=`원인행위 합계 <strong>${fmtMoney(data.cause.total)}</strong> − 카드사용 합계 <strong>${fmtMoney(data.card.total)}</strong> = 차액 <strong>${fmtMoney(diff)}</strong>${Math.round(diff)===0?' · 전체 합계가 0원으로 일치합니다.':' · 아직 차이가 있습니다.'}`;$('summaryBox').classList.add('show');$('resultsBox').classList.add('show');renderResults('all');setStatus(`1:1 자동매칭 완료: ${nf.format(matched)}건 성공, 중복 후보 ${nf.format(dup)}건.`)}
+function renderResults(filter){document.querySelectorAll('.filterbar button').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));const rows=matchRows.filter(r=>filter==='all'||r.type===filter||(filter==='unmatched'&&r.type==='unmatched'));const body=$('resultBody');if(!rows.length){body.innerHTML='<tr><td colspan="6" class="empty">해당 결과가 없습니다.</td></tr>';return}body.innerHTML=rows.slice(0,300).map(r=>{let tag=r.type==='matched'?'<span class="tag ok">자동매칭</span>':r.type==='duplicate'?'<span class="tag warn">중복후보</span>':'<span class="tag bad">미매칭</span>';if(r.type==='duplicate')tag+=`<div class="meta">${esc(r.detail)}</div>`;return `<tr><td>${tag}</td><td class="money">${fmtMoney(r.amount)}</td><td>${esc(r.cause?.date||'')}</td><td>${esc(r.cause?.desc||'')}</td><td>${esc(r.card?.date||'')}</td><td>${esc(r.card?.desc||'')}</td></tr>`}).join('')+(rows.length>300?`<tr><td colspan="6" class="empty">화면에는 처음 300건만 표시합니다. 전체 ${nf.format(rows.length)}건</td></tr>`:'');$('resultCaption').textContent=`${filter==='all'?'전체':filter==='matched'?'자동매칭':filter==='duplicate'?'중복후보':'미매칭'} ${nf.format(rows.length)}건`}
+function clearMatches(){matchRows=[];$('summaryBox').classList.remove('show');$('resultsBox').classList.remove('show')}
+function resetAll(){data={cause:null,card:null};clearMatches();['cause','card'].forEach(t=>{$(t+'Name').textContent='아직 넣지 않았습니다.';$(t+'Zone').classList.remove('ok');$(t+'Analysis').classList.remove('show');$(t+'Analysis').innerHTML='';$(t+'Input').value=''});$('matchBtn').disabled=true;$('excelBtn').disabled=true;setStatus('두 파일을 넣으면 내용을 자동 분석합니다.')}
+['cause','card'].forEach(type=>{const input=$(type+'Input'),zone=$(type+'Zone');input.addEventListener('change',e=>acceptFile(e.target.files[0],type));['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add('dragover')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragover')}));zone.addEventListener('drop',e=>acceptFile(e.dataTransfer.files[0],type))});
+$('matchBtn').addEventListener('click',doMatch);$('resetBtn').addEventListener('click',resetAll);document.querySelectorAll('.filterbar button').forEach(b=>b.addEventListener('click',()=>renderResults(b.dataset.filter)));$('excelBtn').addEventListener('click',()=>alert('엑셀 저장은 4단계에서 연결합니다.'));
+$('settingsBtn').onclick=()=>$('settingsModal').classList.add('show');$('helpBtn').onclick=()=>$('helpModal').classList.add('show');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('show'));document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')}));
 </script>
 </body>
 </html>
