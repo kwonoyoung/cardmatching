@@ -4,13 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>카드통장 0원 맞추기</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f5f7fb}#appFrame{width:100%;height:100vh;border:0;display:block;background:#f5f7fb}
 </style>
 </head>
 <body>
-<iframe id="appFrame" src="app.html?v=20261026-upload-split" title="카드통장 0원 맞추기"></iframe>
-<script>
+<iframe id="appFrame" src="app.html?v=20261026-upload-pdf-xls" title="카드통장 0원 맞추기"></iframe>
+<script type="module">
+import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+
 const frame=document.getElementById('appFrame');
 frame.addEventListener('load',()=>{
   const w=frame.contentWindow,d=frame.contentDocument;
@@ -24,12 +28,52 @@ frame.addEventListener('load',()=>{
   if(multiInput)multiInput.disabled=true;
 
   const firstHint=d.getElementById('firstHint');
-  if(firstHint)firstHint.innerHTML='아래에서 <b>원인행위목록</b>과 <b>카드사용내역</b>을 각각 선택해 주세요. 파일은 이 컴퓨터 밖으로 나가지 않습니다.';
+  if(firstHint)firstHint.innerHTML='아래에서 <b>원인행위목록</b>과 <b>카드사용내역</b>을 각각 선택해 주세요. 지원 파일: <b>PDF · XLSX · XLS</b> · 파일은 이 컴퓨터 밖으로 나가지 않습니다.';
 
   const follow=d.querySelector('[data-pane="follow"] ol');
   if(follow){
     const items=follow.querySelectorAll('li');
-    if(items[2])items[2].innerHTML='<span class="num">3</span><b>파일을 각각 넣기</b> — 왼쪽 <b>원인행위목록 파일 선택</b>, 오른쪽 <b>카드사용내역 파일 선택</b> 버튼으로 각각 업로드하세요. 각 칸에 파일을 끌어다 놓아도 됩니다.';
+    if(items[2])items[2].innerHTML='<span class="num">3</span><b>파일을 각각 넣기</b> — 왼쪽 <b>원인행위목록 파일 선택</b>, 오른쪽 <b>카드사용내역 파일 선택</b> 버튼으로 각각 업로드하세요. 지원 형식은 <b>PDF · XLSX · XLS</b>이며 각 칸에 파일을 끌어다 놓아도 됩니다.';
+  }
+
+  async function pdfToExcelFile(file){
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const allRows=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const content=await page.getTextContent();
+      const items=content.items.filter(x=>String(x.str||'').trim()).map(x=>({text:String(x.str).trim(),x:x.transform[4],y:x.transform[5]}));
+      items.sort((a,b)=>Math.abs(b.y-a.y)>2?b.y-a.y:a.x-b.x);
+      const lines=[];
+      for(const it of items){
+        let line=lines.find(r=>Math.abs(r.y-it.y)<=2.5);
+        if(!line){line={y:it.y,items:[]};lines.push(line)}
+        line.items.push(it);
+      }
+      lines.sort((a,b)=>b.y-a.y);
+      for(const line of lines){
+        line.items.sort((a,b)=>a.x-b.x);
+        const row=[];
+        let prev=null;
+        for(const it of line.items){
+          if(prev===null){row.push(it.text)}
+          else{
+            const gap=it.x-prev;
+            if(gap>28)row.push(it.text);else row[row.length-1]+=' '+it.text;
+          }
+          prev=it.x+Math.max(8,it.text.length*5.5);
+        }
+        if(row.some(v=>String(v).trim()))allRows.push(row);
+      }
+    }
+    if(!allRows.length)throw new Error('PDF에서 읽을 수 있는 텍스트를 찾지 못했습니다. 스캔 이미지 PDF는 지원되지 않습니다.');
+    const wb=w.XLSX.utils.book_new();
+    const ws=w.XLSX.utils.aoa_to_sheet(allRows);
+    w.XLSX.utils.book_append_sheet(wb,ws,'PDF');
+    const out=w.XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const base=file.name.replace(/\.pdf$/i,'');
+    return new File([out],base+'_PDF변환.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }
 
   function addDedicated(kind,expected,labelText){
@@ -41,24 +85,42 @@ frame.addEventListener('load',()=>{
     const box=d.createElement('div');
     box.id=kind+'DedicatedUpload';
     box.style.cssText='margin-top:12px;border:2px dashed #bfc9dc;border-radius:14px;padding:16px;background:#fbfcff;text-align:center;transition:.15s';
-    box.innerHTML='<div style="font-weight:800;margin-bottom:5px">'+labelText+'</div><div style="font-size:13px;color:#6d7786;margin-bottom:10px">파일을 선택하거나 이 영역에 끌어다 놓으세요</div><label class="file-btn" for="'+kind+'DedicatedInput">파일 선택</label><input id="'+kind+'DedicatedInput" type="file" accept=".xlsx,.xls,.csv" style="display:none">';
+    box.innerHTML='<div style="font-weight:800;margin-bottom:5px">'+labelText+'</div><div style="font-size:13px;color:#6d7786;margin-bottom:10px">PDF · XLSX · XLS 파일을 선택하거나 이 영역에 끌어다 놓으세요</div><label class="file-btn" for="'+kind+'DedicatedInput">파일 선택</label><input id="'+kind+'DedicatedInput" type="file" accept=".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none">';
     slot.parentNode.insertBefore(box,slot);
 
     const input=d.getElementById(kind+'DedicatedInput');
     async function useFile(file){
       if(!file)return;
-      if(!/\.(xlsx|xls|csv)$/i.test(file.name)){
-        w.alert('엑셀(xlsx, xls) 또는 CSV 파일을 선택해 주세요.');return;
+      if(!/\.(pdf|xlsx|xls)$/i.test(file.name)){
+        w.alert('PDF, XLSX 또는 XLS 파일만 선택해 주세요.');return;
       }
       try{
-        const checked=await w.readFile(file);
+        box.style.borderColor='#2357d9';box.style.background='#f2f6ff';
+        let targetFile=file;
+        if(/\.pdf$/i.test(file.name)){
+          const status=d.getElementById('statusText');
+          if(status)status.textContent='PDF 내용을 읽고 있습니다...';
+          targetFile=await pdfToExcelFile(file);
+        }
+        const checked=await w.readFile(targetFile);
         if(checked.type!==expected){
           w.alert(expected==='cause'?'이 파일은 원인행위목록으로 인식되지 않습니다. 오른쪽 카드사용내역 칸에 넣어 주세요.':'이 파일은 카드사용내역으로 인식되지 않습니다. 왼쪽 원인행위목록 칸에 넣어 주세요.');
           input.value='';return;
         }
-        await w.handleFiles([file]);
+        await w.handleFiles([targetFile]);
+        if(/\.pdf$/i.test(file.name)){
+          setTimeout(()=>{
+            const currentSlot=d.getElementById(kind+'Slot');
+            const nameEl=currentSlot?.querySelector('.file-name');
+            if(nameEl)nameEl.textContent=file.name+' (PDF 분석)';
+          },0);
+        }
         input.value='';
-      }catch(e){w.alert('파일을 읽지 못했습니다: '+(e&&e.message?e.message:e));}
+      }catch(e){
+        w.alert('파일을 읽지 못했습니다: '+(e&&e.message?e.message:e));
+      }finally{
+        box.style.borderColor='#bfc9dc';box.style.background='#fbfcff';
+      }
     }
     input.addEventListener('change',e=>useFile(e.target.files[0]));
     ['dragenter','dragover'].forEach(ev=>box.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();box.style.borderColor='#2357d9';box.style.background='#f2f6ff'}));
@@ -72,8 +134,8 @@ frame.addEventListener('load',()=>{
   const workspace=d.querySelector('.workspace');
   if(workspace){
     const cards=workspace.querySelectorAll('.card');
-    if(cards[0]){const p=cards[0].querySelector('.hint');if(p)p.textContent='K-에듀파인 원인행위(지급방법-카드) 목록 엑셀을 이 칸에만 넣습니다.';}
-    if(cards[1]){const p=cards[1].querySelector('.hint');if(p)p.textContent='카드사 승인내역(전체승인) 엑셀을 이 칸에만 넣습니다.';}
+    if(cards[0]){const p=cards[0].querySelector('.hint');if(p)p.textContent='K-에듀파인 원인행위(지급방법-카드) 목록 · 지원 형식: PDF, XLSX, XLS';}
+    if(cards[1]){const p=cards[1].querySelector('.hint');if(p)p.textContent='카드사 승인내역(전체승인) · 지원 형식: PDF, XLSX, XLS';}
   }
 });
 </script>
